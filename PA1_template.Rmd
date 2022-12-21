@@ -1,25 +1,99 @@
 ---
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
+title: "PA1_template"
+output: html_document
+date: "2022-12-21"
 ---
 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
 
-## Loading and preprocessing the data
-
-
-
-## What is mean total number of steps taken per day?
-
-
-
-## What is the average daily activity pattern?
+```{r activity}
+library(ggplot2)
+library(tidyverse)
 
 
 
-## Imputing missing values
+activity <- read.csv("activity.csv")
+
+activity$date <- as.POSIXct(activity$date, tz = "Europe/London", "%Y-%m-%d")
+day <- weekdays(activity$date)
+activity <- cbind(activity, day)
 
 
 
-## Are there differences in activity patterns between weekdays and weekends?
+
+total_daily_steps <- activity %>%
+  group_by(date) %>%
+  summarise(daily_steps = sum(steps, na.rm = TRUE))
+
+
+ggplot(total_daily_steps, aes(daily_steps)) +
+  geom_histogram(fill = "orange", col = "black", binwidth = 1800) +
+  xlab("Total number of steps each day") +
+  ylab("Frequency")
+
+
+
+stepmean <- mean(total_daily_steps$daily_steps, na.rm = TRUE)
+stepmedian <- median(total_daily_steps$daily_steps, na.rm = TRUE)
+
+
+
+intervalsteps <- activity %>%
+  group_by(interval) %>%
+  summarise(steps = mean(steps, na.rm = TRUE))
+
+
+ggplot(intervalsteps, aes(x = interval, y = steps)) +
+  geom_line(col = "red") +
+  xlab("5min Interval") +
+  ylab("Average number of steps")
+
+
+
+maxnumofsteps <- intervalsteps[which.max(intervalsteps$steps), ]
+
+totalNA <- sum(is.na(activity$steps))
+
+activity["steps"][is.na(activity["steps"])] <- runif(totalNA, min = min(quantile(activity$steps, probs = 0.25, na.rm = TRUE)), max = max(quantile(activity$steps, probs = 0.75, na.rm = TRUE)))
+
+
+new_total_steps <- activity %>%
+  group_by(date) %>%
+  summarise(daily_steps = sum(steps))
+
+
+
+ggplot(new_total_steps, aes(daily_steps)) +
+  geom_histogram(fill = "orange", col = "black", binwidth = 1800) +
+  xlab("Total number of steps taken each day") +
+  ylab("Frequency")
+
+
+
+
+mean(new_total_steps$daily_steps, na.rm = TRUE)
+median(new_total_steps$daily_steps, na.rm = TRUE)
+
+
+
+
+finalactivity <- activity %>%
+  mutate(Day_type = ifelse(weekdays(activity$date) == "Saturday" | weekdays(activity$date) == "Sunday", "Weekend", "Weekday"))
+
+
+Average_Day_type <- finalactivity %>%
+  group_by(Day_type,interval) %>%
+  summarize(steps = sum(steps))
+
+
+
+
+ggplot(Average_Day_type, aes(interval, steps)) +
+  geom_line(aes(color = steps)) +
+  facet_wrap(~Day_type, ncol = 1, nrow = 2) +
+  xlab("5 Min intervals") +
+  ylab("Average number of steps")
+
+```
